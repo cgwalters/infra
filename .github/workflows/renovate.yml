@@ -1,6 +1,18 @@
 name: Renovate
 on:
   workflow_dispatch:
+    inputs:
+      log-level:
+        description: "Set the Renovate log level (default: info)"
+        required: false
+        default: info
+        type: choice
+        options:
+          - info
+          - debug
+  pull_request:
+    branches:
+      - main
   schedule:
     - cron: '3 * * * *'
 jobs:
@@ -20,6 +32,9 @@ jobs:
 
       - name: Self-hosted Renovate
         uses: renovatebot/github-action@v43.0.9
+        env:
+          RENOVATE_DRY_RUN: ${{ github.event_name == 'pull_request' && 'full' }}
+          LOG_LEVEL: ${{ github.event.inputs.log-level || 'info' }}
         with:
           configurationFile: renovate-config.js
           token: '${{ steps.token.outputs.token }}'

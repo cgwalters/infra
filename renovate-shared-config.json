@@ -1,0 +1,64 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    // Base configuration
+    "config:best-practices",
+
+    // Add "Signed-off-by" footer to commit messages
+    ":gitSignOff",
+
+    // Catch-all for grouping dependencies not caught by other groups
+    "group:all"
+  ],
+
+  // Rebase when there are merge conflicts
+  //
+  // The "conflicted" option is typically the ideal choice for most situations
+  // where you don't want to burn CI credits, while still keeping your branch
+  // in a mergeable state at all times.
+  "rebaseWhen": "conflicted",
+
+  "packageRules": [
+    // Group GitHub Actions dependencies
+    {
+      "description": "GitHub Actions dependencies",
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions",
+      "enabled": true
+    },
+
+    // Group Rust dependencies
+    {
+      "description": "Rust dependencies",
+      "matchManagers": ["cargo"],
+      "groupName": "Rust",
+      "enabled": true
+    },
+
+    // Group Docker dependencies
+    {
+      "description": "Docker dependencies",
+      "matchManagers": ["dockerfile"],
+      "groupName": "Docker",
+      "enabled": true
+    },
+
+    // Disable Containerfile digest pinning
+    {
+      "description": "Containerfile digest pinning",
+      "matchManagers": ["dockerfile"],
+      "pinDigests": false
+    },
+
+    // Disable Fedora OCI updates
+    //
+    // This is due to there not being an easy way to tell Renovate which
+    // Fedora version is "stable" and which has not been released yet.
+    {
+      "description": "Disable Fedora OCI updates",
+      "matchManagers": ["dockerfile"],
+      "matchDepNames": ["quay.io/fedora/fedora"],
+      "enabled": false
+    }
+  ]
+}
