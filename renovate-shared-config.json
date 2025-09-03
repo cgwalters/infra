@@ -6,7 +6,8 @@
     // Add "Signed-off-by" footer to commit messages
     ":gitSignOff",
     // Catch-all for grouping dependencies not caught by other groups
-    "group:all"
+    "group:all",
+    ":preserveSemverRanges"
   ],
   // Rebase when there are merge conflicts
   //
