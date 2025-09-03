@@ -2,7 +2,7 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     // Base configuration
-    "config:best-practices",
+    "config:recommended",
     // Add "Signed-off-by" footer to commit messages
     ":gitSignOff",
     // Catch-all for grouping dependencies not caught by other groups
