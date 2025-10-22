@@ -1,0 +1,139 @@
+name: Sync common files
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'common/**'
+      - '.github/workflows/sync-common.yml'
+
+# Prevent multiple workflow runs from racing
+concurrency: ${{ github.workflow }}
+
+permissions:
+  contents: read
+
+jobs:
+  init:
+    name: Discover repositories
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.get-repos.outputs.matrix }}
+    steps:
+      - name: Generate Actions Token
+        id: token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Get repository list
+        id: get-repos
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ steps.token.outputs.token }}
+          script: |
+            const repos = await github.paginate(github.rest.repos.listForOrg, {
+              org: context.repo.owner,
+              type: 'all',
+              per_page: 100
+            });
+
+            // Filter out archived repos and this repo itself
+            const activeRepos = repos.filter(repo =>
+              !repo.archived &&
+              repo.name !== context.repo.repo &&
+              !repo.name.startsWith('.')
+            );
+
+            const matrix = activeRepos.map(repo => ({
+              repo: repo.name,
+              full_name: repo.full_name
+            }));
+
+            console.log('Discovered repositories:', matrix);
+            core.setOutput('matrix', JSON.stringify(matrix));
+
+      - name: Upload common files
+        uses: actions/upload-artifact@v4
+        with:
+          name: common-files
+          path: common/
+
+  sync:
+    name: Sync to ${{ matrix.repo }}
+    needs: init
+    if: needs.init.outputs.matrix != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.init.outputs.matrix) }}
+    steps:
+      - name: Generate Actions Token
+        id: token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ matrix.repo }}
+
+      - name: Checkout target repository
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ matrix.full_name }}
+          token: ${{ steps.token.outputs.token }}
+          path: repo
+
+      - name: Download common files
+        uses: actions/download-artifact@v4
+        with:
+          name: common-files
+          path: common-files
+
+      - name: Get bot user info
+        id: bot-user
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ steps.token.outputs.token }}
+          script: |
+            const user = await github.rest.users.getAuthenticated();
+            console.log('Bot user:', user.data);
+            core.setOutput('name', user.data.login);
+            core.setOutput('email', `${user.data.id}+${user.data.login}@users.noreply.github.com`);
+
+      - name: Sync common files to repository
+        run: |
+          # Create target directory if it doesn't exist
+          mkdir -p repo/.gemini
+
+          # Copy files from common to repo
+          if [ -d common-files/.gemini ]; then
+            cp -r common-files/.gemini/* repo/.gemini/
+          fi
+
+      - name: Open pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ steps.token.outputs.token }}
+          path: repo
+          branch: sync-common-files
+          commit-message: |
+            Sync common files from infra repository
+
+            Synchronized from ${{ github.repository }}@${{ github.sha }}.
+          title: Sync common files from infra repository
+          body: |
+            Created by [GitHub workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/sync-common.yml) ([source](${{ github.server_url }}/${{ github.repository }}/blob/main/.github/workflows/sync-common.yml)).
+
+            This PR synchronizes common files from the [infra repository](${{ github.server_url }}/${{ github.repository }}/tree/main/common).
+
+            Synchronized from ${{ github.repository }}@${{ github.sha }}.
+          committer: "${{ steps.bot-user.outputs.name }} <${{ steps.bot-user.outputs.email }}>"
+          author: "${{ steps.bot-user.outputs.name }} <${{ steps.bot-user.outputs.email }}>"
