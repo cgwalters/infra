@@ -1,0 +1,74 @@
+ARG base=docker.io/library/debian:sid
+# These aren't packages, just binaries dropped in /usr/local/bin
+# so we can fetch them independently.
+FROM $base as tools
+# Life is too short to care about dash
+RUN ln -sfr /bin/bash /bin/sh
+ARG gooseversion=v1.11.1
+ARG bcvkversion=v0.5.3
+RUN <<EORUN
+set -xeuo pipefail
+
+apt -y update && apt -y install curl time bzip2
+
+rm -vrf /usr/local/bin/*
+
+# goose
+target=goose-$(arch)-unknown-linux-gnu.tar.bz2
+/bin/time -f '%E %C' curl -fLO https://github.com/block/goose/releases/download/$gooseversion/$target
+tar xvjf $target
+mv goose /usr/local/bin/goose
+
+# bcvk
+td=$(mktemp -d)
+cd $td
+target=bcvk-$(arch)-unknown-linux-gnu
+/bin/time -f '%E %C' curl -fLO https://github.com/bootc-dev/bcvk/releases/download/$bcvkversion/${target}.tar.gz
+tar xvzf $target.tar.gz
+mv $target /usr/local/bin/bcvk
+cd -
+rm -rf $td
+EORUN
+
+# Build this using `just devenv-build` from the root of the repository.
+FROM docker.io/library/debian:sid
+# Life is too short to care about dash
+RUN ln -sfr /bin/bash /bin/sh
+COPY . /run/src
+WORKDIR /run/src
+RUN <<EORUN
+set -xeuo pipefail
+# Enable deb-src repositories for build-dep
+sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list.d/debian.sources
+sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/debian.sources
+
+# Bootstrap tools
+apt -y update && apt -y install curl time
+
+# Enable gh CLI repository
+mkdir -p -m 755 /etc/apt/keyrings
+curl -fLo /etc/apt/keyrings/githubcli-archive-keyring.gpg https://cli.github.com/packages/githubcli-archive-keyring.gpg
+chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
+mkdir -p -m 755 /etc/apt/sources.list.d
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list
+
+apt -y update
+grep -vEe '^#' packages.txt | /bin/time -f '%E %C' xargs apt -y install
+grep -vEe '^#' build-deps.txt | /bin/time -f '%E %C' xargs apt -y build-dep
+EORUN
+# Setup rust via rustup. TODO also split this to a separate stage
+# Set Rust environment variables globally
+ENV RUSTUP_HOME=/usr/local/rustup \
+    CARGO_HOME=/usr/local/cargo \
+    PATH=/usr/local/cargo/bin:$PATH
+RUN <<EORUN
+set -xeuo pipefail
+# Install Rust system-wide in /usr/local
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable --profile default
+# Add cargo to PATH for all users
+echo 'export PATH="/usr/local/cargo/bin:$PATH"' > /etc/profile.d/rust.sh
+chmod +x /etc/profile.d/rust.sh
+ln -s /usr/local/cargo/bin/* /usr/local/bin/ 2>/dev/null || true
+EORUN
+COPY --from=tools /usr/local/bin/* /usr/local/bin/
+WORKDIR /

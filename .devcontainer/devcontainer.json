@@ -1,0 +1,29 @@
+{
+  "name": "bootc-dev",
+  "image": "ghcr.io/bootc-dev/infra/devenv:main",
+  "build": {
+    "context": "..",
+    "dockerfile": "../devenv/Containerfile"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml"
+      ]
+    }
+  },
+  "features": {},
+  "remoteUser": "root",
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  ],
+  "runArgs": [
+    "--privileged"
+  ],
+  "postCreateCommand": "echo 'DevContainer ready!'",
+  "remoteEnv": {
+    "PATH": "${containerEnv:PATH}:/usr/local/cargo/bin"
+  }
+}
+
