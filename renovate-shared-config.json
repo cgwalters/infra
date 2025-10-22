@@ -15,6 +15,16 @@
   // where you don't want to burn CI credits, while still keeping your branch
   // in a mergeable state at all times.
   "rebaseWhen": "conflicted",
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Update ARG version variables in Containerfiles with renovate comments",
+      "fileMatch": ["(^|/)Containerfile$", "(^|/)Dockerfile$"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>[^\\s]+)\\s+ARG \\w+version=(?<currentValue>.+)"
+      ]
+    }
+  ],
   "packageRules": [
     // Group GitHub Actions dependencies
     {
@@ -44,7 +54,8 @@
         "Docker dependencies"
       ],
       "matchManagers": [
-        "dockerfile"
+        "dockerfile",
+        "regex"
       ],
       "groupName": "Docker",
       "enabled": true
