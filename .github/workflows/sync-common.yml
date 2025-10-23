@@ -103,10 +103,12 @@ jobs:
         with:
           github-token: ${{ steps.token.outputs.token }}
           script: |
-            const user = await github.rest.users.getAuthenticated();
-            console.log('Bot user:', user.data);
-            core.setOutput('name', user.data.login);
-            core.setOutput('email', `${user.data.id}+${user.data.login}@users.noreply.github.com`);
+            const app = await github.rest.apps.getAuthenticated();
+            console.log('Bot app:', app.data);
+            const botName = `${app.data.slug}[bot]`;
+            const botEmail = `${app.data.id}+${app.data.slug}[bot]@users.noreply.github.com`;
+            core.setOutput('name', botName);
+            core.setOutput('email', botEmail);
 
       - name: Sync common files to repository
         run: |
