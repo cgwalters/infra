@@ -1,27 +1,27 @@
 {
-  "name": "bootc-dev",
-  "image": "ghcr.io/bootc-dev/infra/devenv:main",
-  "build": {
-    "context": "..",
-    "dockerfile": "../devenv/Containerfile"
-  },
+  "name": "bootc-devenv-debian",
+  // TODO override this back to prod image
+  "image": "quay.io/cgwalters/ostest:devenv",
   "customizations": {
     "vscode": {
+      // Abitrary, but most of our code is in one of these two
       "extensions": [
         "rust-lang.rust-analyzer",
-        "tamasfe.even-better-toml"
+        "golang.Go"
       ]
     }
   },
   "features": {},
   "remoteUser": "root",
-  "mounts": [
-    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
-  ],
   "runArgs": [
+    // Because we want to be able to run podman and also use e.g. /dev/kvm
+    // among other things
     "--privileged"
   ],
-  "postCreateCommand": "echo 'DevContainer ready!'",
+  "postCreateCommand": {
+    // Our init script
+    "devenv-init": "/usr/local/bin/devenv-init.sh",
+  },
   "remoteEnv": {
     "PATH": "${containerEnv:PATH}:/usr/local/cargo/bin"
   }

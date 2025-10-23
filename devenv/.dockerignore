@@ -5,3 +5,4 @@
 # And explicit includes
 !packages.txt
 !build-deps.txt
+!devenv-init.sh
