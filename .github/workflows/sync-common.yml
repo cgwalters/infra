@@ -97,28 +97,17 @@ jobs:
           name: common-files
           path: common-files
 
-      - name: Get bot user info
-        id: bot-user
-        uses: actions/github-script@v8
-        with:
-          github-token: ${{ steps.token.outputs.token }}
-          script: |
-            const app = await github.rest.apps.getAuthenticated();
-            console.log('Bot app:', app.data);
-            const botName = `${app.data.slug}[bot]`;
-            const botEmail = `${app.data.id}+${app.data.slug}[bot]@users.noreply.github.com`;
-            core.setOutput('name', botName);
-            core.setOutput('email', botEmail);
-
       - name: Sync common files to repository
         run: |
-          # Create target directory if it doesn't exist
-          mkdir -p repo/.gemini
+          # First pass: copy all files
+          rsync -rlv common-files/ repo/
 
-          # Copy files from common to repo
-          if [ -d common-files/.gemini ]; then
-            cp -r common-files/.gemini/* repo/.gemini/
-          fi
+          # Second pass: for each subdirectory in common-files, use --delete
+          # to remove files that no longer exist in the source
+          find common-files -mindepth 1 -maxdepth 1 -type d | while read -r dir; do
+            subdir="${dir#common-files/}"
+            rsync -rlv --delete "common-files/$subdir/" "repo/$subdir/"
+          done
 
       - name: Open pull request
         uses: peter-evans/create-pull-request@v7
@@ -137,5 +126,6 @@ jobs:
             This PR synchronizes common files from the [infra repository](${{ github.server_url }}/${{ github.repository }}/tree/main/common).
 
             Synchronized from ${{ github.repository }}@${{ github.sha }}.
-          committer: "${{ steps.bot-user.outputs.name }} <${{ steps.bot-user.outputs.email }}>"
-          author: "${{ steps.bot-user.outputs.name }} <${{ steps.bot-user.outputs.email }}>"
+          committer: "bootc-dev Bot <bot@bootc.dev>"
+          author: "bootc-dev Bot <bot@bootc.dev>"
+          signoff: true
