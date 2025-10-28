@@ -14,7 +14,21 @@ env:
   IMAGE_NAME: ${{ github.repository_owner }}/devenv-debian
 
 jobs:
+  validate-devcontainer:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install devcontainer CLI
+        run: npm install -g @devcontainers/cli
+
+      - name: Validate devcontainer.json syntax
+        run: devcontainer read-configuration --workspace-folder .
+
   build:
+    needs: validate-devcontainer
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
