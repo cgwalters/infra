@@ -21,11 +21,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install devcontainer CLI
-        run: npm install -g @devcontainers/cli
+      - name: Install just
+        uses: extractions/setup-just@v2
 
       - name: Validate devcontainer.json syntax
-        run: devcontainer read-configuration --workspace-folder .
+        run: just devcontainer-validate
 
   build:
     needs: validate-devcontainer
