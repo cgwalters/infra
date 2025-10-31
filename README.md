@@ -6,6 +6,8 @@ This repository provides centralised configuration and automation for the [bootc
 ## Table of Contents
 
 - [Purpose](#purpose)
+- [Development Environment](#development-environment)
+- [Container Image Management](#container-image-management)
 - [Renovate](#renovate)
 - [Getting Started](#getting-started)
 - [Support & Contributions](#support--contributions)
@@ -24,6 +26,18 @@ The main goal of this repository is to:
 
 ---
 
+## Development Environment
+
+Containerized development environment with necessary tools and dependencies. For more,
+see [devenv/README.md](devenv/README.md).
+
+---
+
+## Container Garbage Collection
+
+Automated cleanup of old container images from GitHub Container Registry.
+
+---
 
 ## Renovate
 
