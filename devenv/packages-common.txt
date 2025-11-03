@@ -1,0 +1,28 @@
+# Key dependencies that have the same package name across distributions
+just
+podman
+curl
+git
+sudo
+
+# Generic utilities
+acl
+
+# General build env (note: we install rust through rustup later)
+gcc
+clang
+pkg-config
+go-md2man
+
+# Runtime virt (common packages)
+qemu-kvm
+virtiofsd
+
+# TUI editors
+nano
+
+# Dependency of other things like gemini CLI
+npm
+
+# From 3rd party repos
+gh
