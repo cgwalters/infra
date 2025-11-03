@@ -15,8 +15,9 @@
   // where you don't want to burn CI credits, while still keeping your branch
   // in a mergeable state at all times.
   "rebaseWhen": "conflicted",
-  "regexManagers": [
+  "customManagers": [
     {
+      "customType": "regex",
       "fileMatch": ["(^|/)Containerfile$", "(^|/)Dockerfile$"],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>[^\\s]+)\\s+ARG \\w+version=(?<currentValue>.+)"
@@ -47,7 +48,7 @@
       "description": "Docker dependencies",
       "matchManagers": [
         "dockerfile",
-        "regex"
+        "custom.regex"
       ],
       "groupName": "Docker",
       "enabled": true

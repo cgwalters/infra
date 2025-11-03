@@ -27,6 +27,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Validate Renovate config
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo \
+            ghcr.io/renovatebot/renovate:41 \
+            renovate-config-validator renovate-shared-config.json
+
       - name: Self-hosted Renovate
         uses: renovatebot/github-action@v43.0.10
         env:
