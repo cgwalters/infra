@@ -1,0 +1,16 @@
+# Debian-specific package names
+# Common packages are in packages-common.txt
+
+# General build env
+clang-format
+libkrb5-dev
+libvirt-dev
+libostree-dev
+
+# Runtime virt
+genisoimage
+qemu-utils
+libvirt-daemon-system
+
+# TUI editors
+vim

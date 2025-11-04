@@ -1,0 +1,16 @@
+# CentOS Stream 10 specific package names
+# Common packages are in packages-common.txt
+
+# General build env
+clang-tools-extra
+krb5-devel
+libvirt-devel
+ostree-devel
+
+# Runtime virt
+xorriso
+qemu-img
+libvirt-daemon-kvm
+
+# TUI editors
+vim-enhanced

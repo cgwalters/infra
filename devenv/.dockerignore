@@ -4,5 +4,10 @@
 *
 # And explicit includes
 !packages.txt
+!packages-common.txt
+!packages-debian.txt
+!packages-c10s.txt
 !build-deps.txt
+!build-deps-debian.txt
+!build-deps-c10s.txt
 !devenv-init.sh
