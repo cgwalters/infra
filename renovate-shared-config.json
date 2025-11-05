@@ -18,7 +18,7 @@
   "customManagers": [
     {
       "customType": "regex",
-      "fileMatch": ["(^|/)Containerfile$", "(^|/)Dockerfile$"],
+      "managerFilePatterns": ["(^|/)Containerfile$", "(^|/)Dockerfile$"],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>[^\\s]+)\\s+ARG \\w+version=(?<currentValue>.+)"
       ]
@@ -27,7 +27,7 @@
   "packageRules": [
     // Group GitHub Actions dependencies
     {
-      "description": "GitHub Actions dependencies",
+      "description": ["GitHub Actions dependencies"],
       "matchManagers": [
         "github-actions"
       ],
@@ -36,7 +36,7 @@
     },
     // Group Rust dependencies
     {
-      "description": "Rust dependencies",
+      "description": ["Rust dependencies"],
       "matchManagers": [
         "cargo"
       ],
@@ -45,7 +45,7 @@
     },
     // Group Docker dependencies
     {
-      "description": "Docker dependencies",
+      "description": ["Docker dependencies"],
       "matchManagers": [
         "dockerfile",
         "custom.regex"
@@ -55,7 +55,7 @@
     },
     // Disable Containerfile digest pinning
     {
-      "description": "Containerfile digest pinning",
+      "description": ["Containerfile digest pinning"],
       "matchManagers": [
         "dockerfile"
       ],
@@ -66,7 +66,7 @@
     // This is due to there not being an easy way to tell Renovate which
     // Fedora version is "stable" and which has not been released yet.
     {
-      "description": "Disable Fedora OCI updates",
+      "description": ["Disable Fedora OCI updates"],
       "matchManagers": [
         "dockerfile",
         "github-actions"
