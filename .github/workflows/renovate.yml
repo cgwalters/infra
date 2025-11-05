@@ -1,5 +1,6 @@
 name: Renovate
 on:
+  pull_request:
   workflow_dispatch:
     inputs:
       log-level:
@@ -13,11 +14,29 @@ on:
   schedule:
     - cron: '3 * * * *'
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Validate Renovate config
+        uses: renovatebot/github-action@v43.0.10
+        env:
+          RENOVATE_DRY_RUN: lookup
+          LOG_LEVEL: debug
+        with:
+          configurationFile: renovate-config.js
+          token: '${{ secrets.GITHUB_TOKEN }}'
+
   renovate:
     runs-on: ubuntu-latest
+    needs: validate
+    if: github.event_name != 'pull_request'
     steps:
       - name: Generate Actions Token
         id: token
+        if: github.repository_owner == 'bootc-dev'
         uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ secrets.APP_ID }}
@@ -27,17 +46,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Validate Renovate config
-        run: |
-          docker run --rm -v "$PWD:/repo" -w /repo \
-            ghcr.io/renovatebot/renovate:41 \
-            renovate-config-validator renovate-shared-config.json
-
       - name: Self-hosted Renovate
         uses: renovatebot/github-action@v43.0.10
         env:
-          RENOVATE_DRY_RUN: ${{ github.event_name == 'pull_request' && 'full' }}
+          RENOVATE_DRY_RUN: ${{ github.repository_owner != 'bootc-dev' && 'full' }}
           LOG_LEVEL: ${{ github.event.inputs.log-level || 'info' }}
         with:
           configurationFile: renovate-config.js
-          token: '${{ steps.token.outputs.token }}'
+          token: '${{ steps.token.outputs.token || secrets.GITHUB_TOKEN }}'
