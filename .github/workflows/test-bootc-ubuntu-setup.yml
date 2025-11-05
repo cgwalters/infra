@@ -1,0 +1,54 @@
+name: Test Bootc Ubuntu Setup
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'common/.github/actions/bootc-ubuntu-setup/**'
+      - '.github/workflows/test-bootc-ubuntu-setup.yml'
+
+jobs:
+  test-basic-setup:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run bootc-ubuntu-setup
+        uses: ./common/.github/actions/bootc-ubuntu-setup
+
+      - name: Verify installations
+        run: |
+          set -xeuo pipefail
+          # Verify podman is installed and working
+          podman version
+          # Verify just is installed
+          just --version
+          # Verify architecture env var is set
+          echo "ARCH=$ARCH"
+
+  test-libvirt-setup:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run bootc-ubuntu-setup with libvirt
+        uses: ./common/.github/actions/bootc-ubuntu-setup
+        with:
+          libvirt: 'true'
+
+      - name: Verify libvirt installations
+        run: |
+          set -xeuo pipefail
+          # Verify podman is installed
+          podman version
+          # Verify libvirt is installed
+          virsh version
+          # Verify bcvk is installed
+          bcvk --version
+          # Verify /dev/kvm is accessible
+          ls -l /dev/kvm
+          # Verify LIBVIRT_DEFAULT_URI is set
+          echo "LIBVIRT_DEFAULT_URI=$LIBVIRT_DEFAULT_URI"
