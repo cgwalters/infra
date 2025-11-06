@@ -9,6 +9,12 @@
     "group:all",
     ":preserveSemverRanges"
   ],
+  // Clone git submodules when analyzing repositories
+  //
+  // Some repositories use git submodules for vendored dependencies that are
+  // referenced in Cargo.toml files. Without initializing submodules, Renovate
+  // will fail to analyze these dependencies.
+  "cloneSubmodules": true,
   // Rebase when there are merge conflicts
   //
   // The "conflicted" option is typically the ideal choice for most situations
