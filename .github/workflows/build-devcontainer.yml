@@ -14,7 +14,7 @@ env:
 
 jobs:
   validate-devcontainer:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout
@@ -33,19 +33,12 @@ jobs:
       fail-fast: false
       matrix:
         os: [debian, c10s]
+        arch: [amd64, arm64]
         include:
-          - runner: ubuntu-latest
-            platform: linux/amd64
-            arch: amd64
-          - runner: ubuntu-24.04-arm
-            platform: linux/arm64
-            arch: arm64
-          - os: debian
-            containerfile: Containerfile.debian
-            image_name: devenv-debian
-          - os: c10s
-            containerfile: Containerfile.c10s
-            image_name: devenv-c10s
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
     
     steps:
       - name: Checkout
@@ -65,17 +58,17 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image_name }}
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/devenv-${{ matrix.os }}
       
       - name: Build and push by digest
         id: build
         uses: docker/build-push-action@v6
         with:
           context: devenv
-          file: devenv/${{ matrix.containerfile }}
-          platforms: ${{ matrix.platform }}
+          file: devenv/Containerfile.${{ matrix.os }}
+          platforms: linux/${{ matrix.arch }}
           labels: ${{ steps.meta.outputs.labels }}
-          outputs: type=image,name=${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image_name }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
+          outputs: type=image,name=${{ env.REGISTRY }}/${{ github.repository_owner }}/devenv-${{ matrix.os }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
       
       - name: Export digest
         run: |
@@ -92,17 +85,12 @@ jobs:
           retention-days: 1
   
   merge:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: build
     if: github.event_name != 'pull_request'
     strategy:
       matrix:
         os: [debian, c10s]
-        include:
-          - os: debian
-            image_name: devenv-debian
-          - os: c10s
-            image_name: devenv-c10s
     steps:
       - name: Download digests
         uses: actions/download-artifact@v4
@@ -118,7 +106,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image_name }}
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/devenv-${{ matrix.os }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,prefix={{branch}}-,format=short
@@ -137,9 +125,9 @@ jobs:
         working-directory: /tmp/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image_name }}@sha256:%s ' *)
+            $(printf '${{ env.REGISTRY }}/${{ github.repository_owner }}/devenv-${{ matrix.os }}@sha256:%s ' *)
 
       - name: Inspect image
         run: |
-          docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image_name }}:${{ steps.meta.outputs.version }}
+          docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ github.repository_owner }}/devenv-${{ matrix.os }}:${{ steps.meta.outputs.version }}
 
