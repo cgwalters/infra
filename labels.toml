@@ -1,0 +1,6 @@
+# Standard labels for all bootc-dev repositories
+
+labels = [
+  { name = "needs-rebase", color = "fbca04", description = "Used by the rebase helper" },
+  { name = "triaged", color = "1d76db", description = "This issue appears to be valid" },
+]
