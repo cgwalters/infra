@@ -1,0 +1,165 @@
+name: Sync labels
+on:
+  workflow_dispatch:
+    inputs:
+      test_mode:
+        description: 'Test mode - only sync to ci-sandbox'
+        type: boolean
+        default: false
+  push:
+    branches:
+      - main
+    paths:
+      - 'labels.toml'
+      - '.github/workflows/sync-labels.yml'
+
+# Prevent multiple workflow runs from racing
+concurrency: ${{ github.workflow }}
+
+permissions:
+  contents: read
+
+jobs:
+  init:
+    name: Discover repositories
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.get-repos.outputs.matrix }}
+      labels: ${{ steps.parse-labels.outputs.labels }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Parse labels from TOML
+        id: parse-labels
+        run: |
+          python3 -c '
+          import tomllib
+          import json
+          import sys
+          import os
+
+          try:
+              with open("labels.toml", "rb") as f:
+                  data = tomllib.load(f)
+                  labels = data["labels"]
+
+              with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+                  output.write(f"labels={json.dumps(labels)}\n")
+          except Exception as e:
+              print(f"Error parsing labels.toml: {e}", file=sys.stderr)
+              sys.exit(1)
+          '
+
+      - name: Generate Actions Token
+        id: token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Get repository list
+        id: get-repos
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ steps.token.outputs.token }}
+          script: |
+            const repos = await github.paginate(github.rest.repos.listForOrg, {
+              org: context.repo.owner,
+              type: 'all',
+              per_page: 100
+            });
+
+            // Filter out archived repos
+            let activeRepos = repos.filter(repo =>
+              !repo.archived &&
+              !repo.name.startsWith('.')
+            );
+
+            // Test mode - only sync to ci-sandbox
+            const testMode = '${{ github.event.inputs.test_mode }}' === 'true';
+            if (testMode) {
+              console.log('Test mode enabled - only syncing to ci-sandbox');
+              activeRepos = activeRepos.filter(repo => repo.name === 'ci-sandbox');
+            }
+
+            const matrix = activeRepos.map(repo => ({
+              repo: repo.name,
+              full_name: repo.full_name
+            }));
+
+            console.log('Discovered repositories:', matrix);
+            core.setOutput('matrix', JSON.stringify(matrix));
+
+  sync:
+    name: Sync to ${{ matrix.repo }}
+    needs: init
+    if: needs.init.outputs.matrix != '[]'
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.init.outputs.matrix) }}
+    steps:
+      - name: Generate Actions Token
+        id: token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ matrix.repo }}
+
+      - name: Sync labels
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ steps.token.outputs.token }}
+          script: |
+            const labels = ${{ fromJSON(needs.init.outputs.labels) }};
+            const owner = context.repo.owner;
+            const repo = '${{ matrix.repo }}';
+
+            console.log(`Syncing labels to ${owner}/${repo}`);
+
+            for (const label of labels) {
+              try {
+                // Try to get the label to see if it exists
+                const existingLabel = await github.rest.issues.getLabel({
+                  owner,
+                  repo,
+                  name: label.name
+                });
+
+                // Label exists - update it if color or description changed
+                if (existingLabel.data.color !== label.color ||
+                    existingLabel.data.description !== label.description) {
+                  console.log(`Updating label "${label.name}"`);
+                  await github.rest.issues.updateLabel({
+                    owner,
+                    repo,
+                    name: label.name,
+                    color: label.color,
+                    description: label.description
+                  });
+                } else {
+                  console.log(`Label "${label.name}" already up to date`);
+                }
+              } catch (error) {
+                if (error.status === 404) {
+                  // Label doesn't exist, create it
+                  console.log(`Creating label "${label.name}"`);
+                  await github.rest.issues.createLabel({
+                    owner,
+                    repo,
+                    name: label.name,
+                    color: label.color,
+                    description: label.description
+                  });
+                } else {
+                  throw error;
+                }
+              }
+            }
+
+            console.log('Label sync complete');
