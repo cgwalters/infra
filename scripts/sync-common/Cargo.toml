@@ -1,0 +1,11 @@
+[package]
+name = "sync-common"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0"
+xshell = "0.2"
+
+[dev-dependencies]
+tempfile = "3.0"
