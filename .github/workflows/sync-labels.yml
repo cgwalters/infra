@@ -113,10 +113,12 @@ jobs:
 
       - name: Sync labels
         uses: actions/github-script@v8
+        env:
+          LABELS_JSON: ${{ needs.init.outputs.labels }}
         with:
           github-token: ${{ steps.token.outputs.token }}
           script: |
-            const labels = ${{ fromJSON(needs.init.outputs.labels) }};
+            const labels = JSON.parse(process.env.LABELS_JSON);
             const owner = context.repo.owner;
             const repo = '${{ matrix.repo }}';
 
