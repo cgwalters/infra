@@ -12,6 +12,7 @@ on:
     paths:
       - 'common/**'
       - '.github/workflows/sync-common.yml'
+      - 'scripts/sync-common/**'
 
 # Prevent multiple workflow runs from racing
 concurrency: ${{ github.workflow }}
@@ -20,6 +21,26 @@ permissions:
   contents: read
 
 jobs:
+  build:
+    name: Build sync-common tool
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+
+      - name: Build sync-common
+        run: cargo build --release --manifest-path scripts/sync-common/Cargo.toml
+
+      - name: Upload sync-common binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: sync-common
+          path: scripts/sync-common/target/release/sync-common
+          retention-days: 1
+
   init:
     name: Discover repositories
     runs-on: ubuntu-latest
@@ -73,7 +94,7 @@ jobs:
 
   sync:
     name: Sync to ${{ matrix.repo }}
-    needs: init
+    needs: [build, init]
     if: needs.init.outputs.matrix != '[]'
     runs-on: ubuntu-latest
     strategy:
@@ -103,43 +124,16 @@ jobs:
           token: ${{ steps.token.outputs.token }}
           path: repo
 
+      - name: Download sync-common binary
+        uses: actions/download-artifact@v4
+        with:
+          name: sync-common
+          path: .
+
       - name: Sync common files to repository
         run: |
-          cd infra
-          CURRENT_COMMIT="${{ github.sha }}"
-
-          # Get the last synced commit from target repo
-          if [ -f "../repo/.bootc-dev-infra-commit.txt" ]; then
-            PREVIOUS_COMMIT=$(cat ../repo/.bootc-dev-infra-commit.txt)
-            echo "Previous sync: $PREVIOUS_COMMIT"
-            echo "Current commit: $CURRENT_COMMIT"
-
-            # Generate patch for changes to common/ directory
-            # Strip the 'common/' prefix so patch applies to repo root
-            git diff "$PREVIOUS_COMMIT" "$CURRENT_COMMIT" -- common/ | \
-              sed 's|a/common/|a/|g; s|b/common/|b/|g' > ../changes.patch
-
-            # Apply the patch to target repo only if there are changes
-            if [ -s ../changes.patch ]; then
-              echo "Applying patch:"
-              cat ../changes.patch
-              cd ../repo
-              patch -p1 < ../changes.patch
-
-              # Update the commit marker only when we applied changes
-              echo "$CURRENT_COMMIT" > .bootc-dev-infra-commit.txt
-            else
-              echo "No changes in common/ directory, skipping"
-            fi
-          else
-            # First sync - copy everything
-            echo "First sync - copying all files"
-            cd ../repo
-            rsync -av ../infra/common/ .
-
-            # Update the commit marker
-            echo "$CURRENT_COMMIT" > .bootc-dev-infra-commit.txt
-          fi
+          chmod +x sync-common
+          ./sync-common infra repo "${{ github.sha }}"
 
       - name: Open pull request
         uses: peter-evans/create-pull-request@v7
