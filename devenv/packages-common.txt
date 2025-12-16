@@ -7,6 +7,7 @@ sudo
 
 # Generic utilities
 acl
+rsync
 
 # General build env (note: we install rust through rustup later)
 gcc
