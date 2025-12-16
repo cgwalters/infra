@@ -36,11 +36,13 @@ arch=$(arch)
 
 rm -vrf /usr/local/bin/*
 
-# goose for local AI
+# goose is a single static binary
 target=goose-${arch}-unknown-linux-gnu.tar.bz2
 /bin/time -f '%E %C' curl -fLO https://github.com/block/goose/releases/download/$gooseversion/$target
 tar xvjf $target
 mv goose /usr/local/bin/goose
+
+## Other tools
 
 # bcvk
 if test "${arch}" = x86_64; then
@@ -83,6 +85,8 @@ grep -vEe '^#' packages.txt | /bin/time -f '%E %C' xargs apt -y install
 grep -vEe '^#' build-deps.txt | /bin/time -f '%E %C' xargs apt -y build-dep
 apt clean && rm -rf /var/lib/apt/lists/*
 EORUN
+COPY npm.txt /run/src
+RUN grep -vEe '^#' npm.txt | /bin/time -f '%E %C' xargs npm i -g
 
 # Copy in the binaries from our tools container image
 COPY --from=tools /usr/local/bin/* /usr/local/bin/
