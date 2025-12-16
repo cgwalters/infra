@@ -84,6 +84,8 @@ grep -hEve '^#' packages-common.txt packages-debian.txt | /bin/time -f '%E %C' x
 grep -vEe '^#' build-deps-debian.txt | /bin/time -f '%E %C' xargs apt -y build-dep
 apt clean && rm -rf /var/lib/apt/lists/*
 EORUN
+COPY npm.txt /run/src
+RUN grep -vEe '^#' npm.txt | /bin/time -f '%E %C' xargs npm i -g
 
 # Copy in the binaries from our tools container image
 COPY --from=tools /usr/local/bin/* /usr/local/bin/
