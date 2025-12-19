@@ -9,6 +9,10 @@ OpenCode commands.
 
 ## Available Tasks
 
+- **[diff-quiz](diff-quiz.md)** — Generate a quiz to verify human understanding
+  of code changes. Helps ensure that developers using AI tools understand the
+  code they're submitting. Supports easy, medium, and hard difficulty levels.
+
 - **[perform-forge-review](perform-forge-review.md)** — Create AI-assisted code
   reviews on GitHub, GitLab, or Forgejo. Builds review comments in a local JSONL
   file for human inspection before submitting as a pending/draft review.
