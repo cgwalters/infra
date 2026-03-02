@@ -22,7 +22,7 @@
   "customManagers": [
     {
       "customType": "regex",
-      "managerFilePatterns": ["(^|/)Containerfile$", "(^|/)Dockerfile$"],
+      "managerFilePatterns": ["(^|/)Containerfile[^/]*$", "(^|/)Dockerfile[^/]*$"],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>[^\\s]+)\\s+ARG \\w+version=(?<currentValue>.+)"
       ]
@@ -55,6 +55,18 @@
       "matchStrings": [
         "# renovate: datasource=(?<datasource>git-refs) depName=(?<depName>[^\\s]+) branch=(?<currentValue>[^\\s]+)\\n[^\\n]*\"(?<currentDigest>[a-f0-9]{40})\"",
         "# renovate: datasource=(?<datasource>git-refs) depName=(?<depName>[^\\s]+) branch=(?<currentValue>[^\\s]+)\\n[^\\n]*'(?<currentDigest>[a-f0-9]{40})'"
+      ]
+    },
+    // Git refs (commit SHA) tracking in Containerfiles/Dockerfiles
+    // Example:
+    //   # renovate: datasource=git-refs depName=https://github.com/org/repo branch=main
+    //   ARG some_ref=main
+    //   ARG some_commit=0000000000000000000000000000000000000000
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["(^|/)Containerfile[^/]*$", "(^|/)Dockerfile[^/]*$"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>git-refs) depName=(?<depName>[^\\s]+) branch=(?<currentValue>[^\\s]+)\\nARG \\w+=\\S+\\nARG \\w+=(?<currentDigest>[a-f0-9]{40})"
       ]
     }
   ],
