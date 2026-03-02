@@ -25,6 +25,24 @@ EOREPO
 dnf -y makecache
 EORUN
 
+# Clone agent skills at a pinned commit for reproducible builds
+FROM base as skills
+RUN dnf install -y git-core && dnf clean all
+# renovate: datasource=git-refs depName=https://github.com/bootc-dev/agent-skills branch=main
+ARG agent_skills_ref=main
+ARG agent_skills_commit=13fdc5da853bec37b1f36e88a07844eb5f422490
+RUN <<EORUN
+set -xeuo pipefail
+git clone https://github.com/bootc-dev/agent-skills /srv/agent-skills
+cd /srv/agent-skills
+git checkout "${agent_skills_commit}"
+# Install only skill directories (those containing SKILL.md) into /out
+mkdir /out
+for d in */; do
+  [ -f "${d}SKILL.md" ] && cp -a "$d" /out/
+done
+EORUN
+
 FROM base as tools
 # renovate: datasource=github-releases depName=bootc-dev/bcvk
 ARG bcvkversion=v0.9.0
@@ -103,6 +121,8 @@ echo 'devenv ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/devenv && chmod 0440 /etc/
 # TODO: /etc/shadow permissions need fixing for PAM/sudo with --userns=keep-id
 # See https://github.com/bootc-dev/infra/issues/XXX
 EORUN
+# Install agent skills for AI coding assistants (OpenCode, Claude Code, etc.)
+COPY --from=skills --chown=devenv:devenv /out/ /home/devenv/.config/opencode/skills/
 # To avoid overlay-on-overlay with nested containers
 VOLUME [ "/var/lib/containers", "/home/devenv/.local/share/containers/" ]
 USER devenv

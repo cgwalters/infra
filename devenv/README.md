@@ -54,6 +54,16 @@ namespace (typical for rootless podman, GitHub Codespaces, etc.) and adjusts:
 - **Constrained namespace** (<100k UIDs): Dynamically calculates subuid/subgid
   ranges, uses `cgroups = "disabled"` and `utsns = "host"`
 
+## Agent skills
+
+The image includes pre-installed [agent skills](https://github.com/bootc-dev/agent-skills)
+from the bootc-dev organization, placed at `~/.config/opencode/skills/`.
+These are discovered automatically by OpenCode and other compatible AI coding
+assistants.
+
+The skills are cloned from the agent-skills repo at a pinned commit SHA.
+Renovate keeps the commit SHA up to date via the `git-refs` datasource.
+
 ## Building locally
 
 See the `Justfile`, but it's just a thin wrapper around a default
